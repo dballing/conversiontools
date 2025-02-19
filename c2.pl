@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 
+#use lib '/Users/derek.balling/perl5/lib';
 use DateTime;
 use Getopt::Long;
 
@@ -8,13 +9,15 @@ use Switch;
 use strict;
 
 my $noTV = '';
-my $noDropbox = '';
 my $noConvert = '';
 my $dryRun = '';
 my $overwriteNew = '';
-my $noKeepOriginal = '';
+my $noCloudOriginal = '';
+my $noCloudConverted = '';
 my $help = '';
 my $eraseWorkproduct = '';
+my $eraseOriginal = '';
+
 #my $handbrakeCLI = '/Applications/HandbrakeCLI';
 my $handbrakeCLI = '/opt/homebrew/bin/HandBrakeCLI';
 
@@ -26,14 +29,15 @@ my %CODECS = (
 my $DEFAULT_CODEC = 'Devices/Apple 720p30 Surround';
 
 GetOptions ("notv" => \$noTV,
-	    "nocloudoriginal|tossorig" => \$noKeepOriginal,
-            "nocloudconverted|nodropbox" => \$noDropbox,
+	    "nocloudoriginal|tossorig" => \$noCloudOriginal,
+            "nocloudconverted|nodropbox" => \$noCloudConverted,
 	    "noconvert" => \$noConvert,
             "dryrun" => \$dryRun,
             "overwrite" => \$overwriteNew,
-	    "yolo" => sub { $noKeepOriginal=1; $noDropbox=1; },
+	    "eraseoriginal" => \$eraseOriginal,
+	    "tvonly" => sub { $noCloudOriginal=1; $noCloudConverted=1; },
             "help" => \$help,
-	    "eraseworkproduct" => \$eraseWorkproduct
+	    "eraseworkproduct" => \$eraseWorkproduct,
     ) 
     or die ("Error in command line arguments\n");
 
@@ -43,24 +47,25 @@ if ($help)
     print STDERR "       noconvert = Do not convert to MP4. Simply store original.\n";
     print STDERR "nocloudconverted = Do not archive converted MP4 to DropBox\n";
     print STDERR " nocloudoriginal = Do not archive original file to DropBox\n";
-    print STDERR "            yolo = Don't archive anything.\n";
+    print STDERR "          tvonly = Don't archive anything.\n";
     print STDERR "       overwrite = Ignore any existing files.\n";
     print STDERR "          dryrun = Do not do anything\n";
     print STDERR "eraseworkproduct = Remove the converted file afterward (do not combine with nocloudconverted and notv together)\n";
+    print STDERR "   eraseoriginal = Remove the original file afterward\n";
     print STDERR "            help = This message.\n";
     exit 1;
 }
 
 if ( ($noConvert && ! $noTV) or
-     ($noConvert && ! $noDropbox) )
+     ($noConvert && ! $noCloudConverted) )
 {
     $noTV = $noConvert;
-    $noDropbox = $noConvert;
+    $noCloudConverted = $noConvert;
     print STDERR "Enabling 'notv' and 'nodropbox' as 'noconvert' has been set\n";
     print STDERR "and those flags require conversion.\n";
 }
 
-if ( ($noDropbox && $noTV)
+if ( ($noCloudConverted && $noTV)
      &&
      $eraseWorkproduct
     )
@@ -183,7 +188,7 @@ sub processFile
     print " --OUTFN: $outputFilename\n" if DEBUG and ! $noConvert;
 
     my $dropboxFilename = $DROPBOX_DIR . '/' . $shortFilename . '.m4v';
-    print " --DRPFN: $dropboxFilename\n" if DEBUG and ! $noDropbox;
+    print " --DRPFN: $dropboxFilename\n" if DEBUG and ! $noCloudConverted;
 
     my $TVFilename = $TV_ADD_DIR . '/' . $shortFilename . '.m4v';
     print " --ITNFN: $TVFilename\n" if DEBUG and ! $noTV;
@@ -237,17 +242,21 @@ sub processFile
                 system("/bin/cp '$outputFilename' '$tmpFilename'");
 		system("/bin/mv '$tmpFilename' '$TVFilename'");
             }
-            if (! $noDropbox )
+            if (! $noCloudConverted )
             {
                 system("/bin/cp '$outputFilename' '$dropboxFilename'");
             }
-	    if ( ! $noKeepOriginal )
+	    if ( ! $noCloudOriginal )
 	    {
 		system("/bin/cp '$sourceFullPathFilename' '$DROPBOX_DIR/.'");
 	    }
 	    if ( $eraseWorkproduct )
 	    {
-		system("/bin/rm $outputFilename");
+		system("/usr/bin/trash $outputFilename");
+	    }
+	    if ( $eraseOriginal )
+	    {
+		system("/usr/bin/trash '$sourceFullPathFilename'");
 	    }
 	}
 	else
