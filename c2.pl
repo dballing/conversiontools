@@ -15,8 +15,8 @@ my $overwriteNew = '';
 my $noCloudOriginal = '';
 my $noCloudConverted = '';
 my $help = '';
-my $eraseWorkproduct = '';
-my $eraseOriginal = '';
+my $trashWorkproduct = '';
+my $trashOriginal = '';
 
 #my $handbrakeCLI = '/Applications/HandbrakeCLI';
 my $handbrakeCLI = '/opt/homebrew/bin/HandBrakeCLI';
@@ -34,10 +34,10 @@ GetOptions ("notv" => \$noTV,
 	    "noconvert" => \$noConvert,
             "dryrun" => \$dryRun,
             "overwrite" => \$overwriteNew,
-	    "eraseoriginal" => \$eraseOriginal,
+	    "trashoriginal" => \$trashOriginal,
 	    "tvonly" => sub { $noCloudOriginal=1; $noCloudConverted=1; },
             "help" => \$help,
-	    "eraseworkproduct" => \$eraseWorkproduct,
+	    "trashworkproduct" => \$trashWorkproduct,
     ) 
     or die ("Error in command line arguments\n");
 
@@ -50,8 +50,8 @@ if ($help)
     print STDERR "          tvonly = Don't archive anything.\n";
     print STDERR "       overwrite = Ignore any existing files.\n";
     print STDERR "          dryrun = Do not do anything\n";
-    print STDERR "eraseworkproduct = Remove the converted file afterward (do not combine with nocloudconverted and notv together)\n";
-    print STDERR "   eraseoriginal = Remove the original file afterward\n";
+    print STDERR "trashworkproduct = Remove the converted file afterward (do not combine with nocloudconverted and notv together)\n";
+    print STDERR "   trashoriginal = Remove the original file afterward\n";
     print STDERR "            help = This message.\n";
     exit 1;
 }
@@ -67,7 +67,7 @@ if ( ($noConvert && ! $noTV) or
 
 if ( ($noCloudConverted && $noTV)
      &&
-     $eraseWorkproduct
+     $trashWorkproduct
     )
 {
     print STDERR "Converted output will be saved in neither Dropbox, nor iTunes, and is scheduled to be deleted.\n";
@@ -250,11 +250,11 @@ sub processFile
 	    {
 		system("/bin/cp '$sourceFullPathFilename' '$DROPBOX_DIR/.'");
 	    }
-	    if ( $eraseWorkproduct )
+	    if ( $trashWorkproduct )
 	    {
 		system("/usr/bin/trash $outputFilename");
 	    }
-	    if ( $eraseOriginal )
+	    if ( $trashOriginal )
 	    {
 		system("/usr/bin/trash '$sourceFullPathFilename'");
 	    }
