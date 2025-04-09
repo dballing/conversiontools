@@ -38,6 +38,7 @@ GetOptions ("notv" => \$noTV,
 	    "tvonly" => sub { $noCloudOriginal=1; $noCloudConverted=1; },
             "help" => \$help,
 	    "trashworkproduct" => \$trashWorkproduct,
+	    "trashall" => { $trashWorkproduct=1; $trashOriginal=1; },
     ) 
     or die ("Error in command line arguments\n");
 
@@ -52,6 +53,7 @@ if ($help)
     print STDERR "          dryrun = Do not do anything\n";
     print STDERR "trashworkproduct = Remove the converted file afterward (do not combine with nocloudconverted and notv together)\n";
     print STDERR "   trashoriginal = Remove the original file afterward\n";
+    print STDERR "        trashall = Both 'trashworkproduct' and 'trashoriginal'\n";
     print STDERR "            help = This message.\n";
     exit 1;
 }
