@@ -38,7 +38,7 @@ GetOptions ("notv" => \$noTV,
 	    "tvonly" => sub { $noCloudOriginal=1; $noCloudConverted=1; },
             "help" => \$help,
 	    "trashworkproduct" => \$trashWorkproduct,
-	    "trashall" => { $trashWorkproduct=1; $trashOriginal=1; },
+	    "trashall" => sub { $trashWorkproduct=1; $trashOriginal=1; },
     ) 
     or die ("Error in command line arguments\n");
 
