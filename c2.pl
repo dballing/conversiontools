@@ -21,6 +21,8 @@ my $trashOriginal = '';
 #my $handbrakeCLI = '/Applications/HandbrakeCLI';
 my $handbrakeCLI = '/opt/homebrew/bin/HandBrakeCLI';
 
+my $mediainfo = '/usr/local/bin/mediainfo';
+
 my %CODECS = (
     '720' => 'Devices/Apple 720p30 Surround',
     '1080' => 'Devices/Apple 1080p30 Surround',
@@ -161,6 +163,54 @@ sub processDirectory
     
 }
 
+sub getSubtitles
+{
+    my $sourceFullPathFilename = shift;
+    my @subsWanted = ();
+    my $foundTextSection = 0;
+
+    print "Getting subtitle indices for $sourceFullPathFilename\n" if DEBUG;
+    print "Exeucting '$mediainfo $sourceFullPathFilename'\n" if DEBUG;
+    open MI, "$mediainfo '$sourceFullPathFilename' | " or die "Couldn't open mediainfo execution: $!";
+    my $currentID;
+    while (<MI>)
+    {
+	chomp;
+	my $line = $_;
+	if ($line =~ /Text \#(\d+)/)
+	{
+	    $currentID = $1;
+	    print "Found subtitle track $currentID\n" if DEBUG;
+	    $foundTextSection = 1;
+	}
+	if ( ($line =~ /Codec ID\s+: (.*)/) and ($foundTextSection) )
+	{
+	    my $localCodec = $1;
+	    print "Codec $localCodec identified.\n" if DEBUG;
+	    if ($localCodec ne 'S_DVBSUB')
+	    {
+		push @subsWanted, ($currentID);
+		print "Subtitle index $currentID/$localCodec added\n" if DEBUG;
+	    }
+	    else
+	    {
+		print "Codec $localCodec rejected because it will require burn-in.\n" if DEBUG;
+	    }
+	    $foundTextSection = 0;
+	    undef $currentID;
+	}
+    }
+    my $commaSubs = 'none';
+    if (scalar(@subsWanted) > 0)
+    {
+	$commaSubs = join ',', @subsWanted;
+    }
+    print "Returning from getSubtitles with commaSubs: '$commaSubs'\n" if DEBUG;
+    close MI;
+    return $commaSubs;
+}
+
+
 sub processFile
 {
     my $sourceFullPathFilename = shift;
@@ -178,10 +228,21 @@ sub processFile
 	print " -- SUBS: $subsFilename\n" if DEBUG;
     }
 
+    my $subsCommas = '1-99';
+    
     if (@subsFilenames)
     {
+	print "Using specifically provided SRT files\n" if DEBUG;
+	
 	$subFileSwitch = ' --srt-file ';
 	$subFileSwitch .= join (',', @subsFilenames);
+    }
+    else
+    {
+	print "Finding valid subtitles from original media\n" if DEBUG;
+	
+	$subsCommas = getSubtitles($sourceFullPathFilename);
+	print "subsCommas = $subsCommas\n" if DEBUG;
     }
 
     print " --SUBSW: $subFileSwitch\n" if DEBUG;
@@ -214,8 +275,8 @@ sub processFile
 	    {
 		$TARGETCODEC = $CODECS{$resOption} if ( $outputFilename =~ /$resOption/ );
 	    }
-	    
-	    my $commandLine = "$handbrakeCLI --crop 0:0:0:0 -i '$sourceFullPathFilename' -o '$outputFilename' --all-subtitles --all-audio --preset='$TARGETCODEC' $subFileSwitch";
+    
+	    my $commandLine = "$handbrakeCLI --crop 0:0:0:0 -i '$sourceFullPathFilename' -o '$outputFilename'--all-audio --preset='$TARGETCODEC'  --subtitle=$subsCommas --subtitle-burned=none $subFileSwitch";
 	    print " --CMDLN: $commandLine\n" if DEBUG;
 	
 	    if (! $dryRun )
