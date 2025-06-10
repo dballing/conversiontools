@@ -276,7 +276,7 @@ sub processFile
 		$TARGETCODEC = $CODECS{$resOption} if ( $outputFilename =~ /$resOption/ );
 	    }
     
-	    my $commandLine = "$handbrakeCLI --crop 0:0:0:0 -i '$sourceFullPathFilename' -o '$outputFilename'--all-audio --preset='$TARGETCODEC'  --subtitle=$subsCommas --subtitle-burned=none $subFileSwitch";
+	    my $commandLine = "$handbrakeCLI --crop 0:0:0:0 -i '$sourceFullPathFilename' -o '$outputFilename' --all-audio --preset='$TARGETCODEC'  --subtitle=$subsCommas --subtitle-burned=none $subFileSwitch";
 	    print " --CMDLN: $commandLine\n" if DEBUG;
 	
 	    if (! $dryRun )
