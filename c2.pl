@@ -90,8 +90,25 @@ my $TRANSCODE_ROOT = $HOMEDIR . '/Desktop/Transcoding';
 my $SRC_PATH = $TRANSCODE_ROOT . '/Actual Programming';
 my $DEST_PATH = $TRANSCODE_ROOT . '/AppleTVReady';
 
-print "TorrentRoot: $TRANSCODE_ROOT\n" if DEBUG;
-print "SourcePath: $SRC_PATH\n" if DEBUG;
+if (DEBUG)
+{
+    print <<EOF
+$TRANSCODE_ROOT
+$SRC_PATH
+$DEST_PATH
+$DROPBOX_DIR
+$TV_ADD_DIR
+EOF
+	;
+}
+
+if ( (! -d $TV_ADD_DIR) || (! -d $DROPBOX_DIR) || (! -d $TRANSCODE_ROOT) ||
+     (! -d $SRC_PATH) || (! -d $DEST_PATH) )
+{
+    die "One or more paths do not exist.\n";
+}
+
+
 opendir SRC, $SRC_PATH;
 my @files = grep (/^[^\.]/, readdir (SRC));
 closedir SRC;
