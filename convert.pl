@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-#use lib '/Users/derek.balling/perl5/lib';
 use DateTime;
 use Getopt::Long;
 
@@ -18,7 +17,6 @@ my $help = '';
 my $trashWorkproduct = '';
 my $trashOriginal = '';
 
-#my $handbrakeCLI = '/Applications/HandbrakeCLI';
 my $handbrakeCLI = '/opt/homebrew/bin/HandBrakeCLI';
 
 my $mediainfo = '/usr/local/bin/mediainfo';
@@ -74,7 +72,7 @@ if ( ($noCloudConverted && $noTV)
      $trashWorkproduct
     )
 {
-    print STDERR "Converted output will be saved in neither Dropbox, nor iTunes, and is scheduled to be deleted.\n";
+    print STDERR "Converted output will be saved in neither Dropbox, nor Apple TV, and is scheduled to be deleted.\n";
     print STDERR "This is a waste of time.\n";
     exit;
 }
@@ -84,30 +82,18 @@ chomp $USERNAME;
 my $HOMEDIR = '/Users/' . $USERNAME;
 
 my $TV_ADD_DIR = $HOMEDIR . '/Movies/TV/Media.localized/Automatically Add To TV.localized';
-#my $DROPBOX_DIR = $HOMEDIR . '/Dropbox (Harris-Balling)/Darkweb Files';
+# This was Dropbox, but now I use MEGA. The script doesn't care, it's just
+# a directory.
 my $DROPBOX_DIR = $HOMEDIR . '/MEGASelectiveSync/Staging';
 my $TRANSCODE_ROOT = $HOMEDIR . '/Desktop/Transcoding';
 my $SRC_PATH = $TRANSCODE_ROOT . '/Actual Programming';
 my $DEST_PATH = $TRANSCODE_ROOT . '/AppleTVReady';
-
-if (DEBUG)
-{
-    print <<EOF
-$TRANSCODE_ROOT
-$SRC_PATH
-$DEST_PATH
-$DROPBOX_DIR
-$TV_ADD_DIR
-EOF
-	;
-}
 
 if ( (! -d $TV_ADD_DIR) || (! -d $DROPBOX_DIR) || (! -d $TRANSCODE_ROOT) ||
      (! -d $SRC_PATH) || (! -d $DEST_PATH) )
 {
     die "One or more paths do not exist.\n";
 }
-
 
 opendir SRC, $SRC_PATH;
 my @files = grep (/^[^\.]/, readdir (SRC));
@@ -189,6 +175,15 @@ sub getSubtitles
     print "Getting subtitle indices for $sourceFullPathFilename\n" if DEBUG;
     print "Exeucting '$mediainfo $sourceFullPathFilename'\n" if DEBUG;
     open MI, "$mediainfo '$sourceFullPathFilename' | " or die "Couldn't open mediainfo execution: $!";
+
+    # We have to do this whole thing because MKV supports graphical subtitles
+    # and MP4 doesn't. If HandbrakeCLI is told to bring a graphical subtitle
+    # over, it will burn it in _even if you tell it not to burn in subtitles_.
+    #
+    # So we have to step through the original media file, find all the
+    # subtitle tracks, and figure out which codec the subtitles are using, in
+    # order to weed out bad ones.
+    
     my $currentID;
     while (<MI>)
     {
@@ -226,7 +221,6 @@ sub getSubtitles
     close MI;
     return $commaSubs;
 }
-
 
 sub processFile
 {
