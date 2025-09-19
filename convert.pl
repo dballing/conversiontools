@@ -326,7 +326,7 @@ sub processFile
 	    }
 	    if ( $trashWorkproduct )
 	    {
-		system("/usr/bin/trash $outputFilename");
+		system("/usr/bin/trash '$outputFilename'");
 	    }
 	    if ( $trashOriginal )
 	    {
