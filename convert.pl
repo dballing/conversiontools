@@ -19,7 +19,7 @@ my $trashOriginal = '';
 
 my $handbrakeCLI = '/opt/homebrew/bin/HandBrakeCLI';
 
-my $mediainfo = '/usr/local/bin/mediainfo';
+my $mediainfo = '/opt/homebrew/bin/mediainfo';
 
 my %CODECS = (
     '720' => 'Devices/Apple 720p30 Surround',
