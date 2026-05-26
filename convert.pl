@@ -4,7 +4,6 @@ use DateTime;
 use Getopt::Long;
 
 use constant DEBUG => 1;
-use Switch;
 use strict;
 
 my $noTV = '';
@@ -199,7 +198,7 @@ sub getSubtitles
 	{
 	    my $localCodec = $1;
 	    print "Codec $localCodec identified.\n" if DEBUG;
-	    if ($localCodec ne 'S_DVBSUB')
+	    if ($localCodec ne 'S_DVBSUB' && $localCodec ne 'S_HDMV/PGS')
 	    {
 		push @subsWanted, ($currentID);
 		print "Subtitle index $currentID/$localCodec added\n" if DEBUG;
