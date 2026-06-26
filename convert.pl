@@ -94,36 +94,60 @@ if ( (! -d $TV_ADD_DIR) || (! -d $DROPBOX_DIR) || (! -d $TRANSCODE_ROOT) ||
     die "One or more paths do not exist.\n";
 }
 
-opendir SRC, $SRC_PATH;
-my @files = grep (/^[^\.]/, readdir (SRC));
-closedir SRC;
+# Track every source video we've already handled (by full path) so that if
+# new files arrive in $SRC_PATH while we were busy converting, we can pick
+# them up on a fresh scan without ever re-processing something already done.
+# This avoids the [a,b] -> [a,b,x] -> [a,b,c,d] re-execution trap: each pass
+# only acts on files it has never seen before, and we stop once a pass finds
+# nothing new.
+my %processed;
+my $everFoundAnything = 0;
 
-if ( $#files < 0 )
+while (1)
 {
-    print STDERR "No files or dirs found in $SRC_PATH.\n";
-    exit;
+    opendir SRC, $SRC_PATH;
+    my @files = grep (/^[^\.]/, readdir (SRC));
+    closedir SRC;
+
+    my $didWork = 0;
+
+    foreach my $sourceFilename (sort {lc $a cmp lc $b} @files)
+    {
+	my $sourceFullPathFilename = "$SRC_PATH/$sourceFilename";
+	if ( -f $sourceFullPathFilename )
+	{
+	    # Skip this individual file if it's not actually a video
+	    next if $sourceFilename !~ /\.(mkv|flv|mp4|m4v|avi)$/;
+	    # Skip anything we've already processed in an earlier pass.
+	    next if $processed{$sourceFullPathFilename}++;
+	    my @subsFilenames = ();
+	    my ($shortFilename) = $sourceFilename =~ /(.*?)\.\w{3}$/;
+	    processFile($sourceFullPathFilename, $shortFilename, \@subsFilenames);
+	    $didWork = 1;
+	    $everFoundAnything = 1;
+	}
+	elsif ( -d $sourceFullPathFilename )
+	{
+	    if ( processDirectory($sourceFullPathFilename, \%processed) )
+	    {
+		$didWork = 1;
+		$everFoundAnything = 1;
+	    }
+	}
+    }
+
+    # If this pass processed nothing new, there's nothing left to pick up.
+    last unless $didWork;
+
+    print STDERR "Rescanning $SRC_PATH for input added during the last pass...\n" if DEBUG;
 }
 
-foreach my $sourceFilename (sort {lc $a cmp lc $b} @files)
-{
-    my $sourceFullPathFilename = "$SRC_PATH/$sourceFilename";
-    if ( -f $sourceFullPathFilename )
-    {
-	# Skip this individual file if it's not actually a video
-	next if $sourceFilename !~ /\.(mkv|flv|mp4|m4v|avi)$/;
-	my @subsFilenames = ();
-	my ($shortFilename) = $sourceFilename =~ /(.*?)\.\w{3}$/;
-	processFile($sourceFullPathFilename, $shortFilename, \@subsFilenames);
-    }
-    elsif ( -d $sourceFullPathFilename )
-    {
-	processDirectory($sourceFullPathFilename);
-    }
-}
+print STDERR "No files or dirs found in $SRC_PATH.\n" unless $everFoundAnything;
 
 sub processDirectory
 {
     my $sourceFullPathFilename = shift;
+    my $processedRef = shift;
 
     my $HAS_SUBS = 0;
     $HAS_SUBS = 1 if ( -d "$sourceFullPathFilename/Subs" );
@@ -133,11 +157,15 @@ sub processDirectory
     closedir PROCESSDIR;
 
     my $numVideos = $#videoFiles + 1;
-    
+
+    my $didWork = 0;
+
     foreach my $potentialVideo (sort {lc $a cmp lc $b} @videoFiles)
     {
 	my $fullPathPotentialVideo = "$sourceFullPathFilename/$potentialVideo";
 	next if $fullPathPotentialVideo !~ /\.(mkv|flv|mp4|m4v|avi)$/;
+	# Skip anything we've already processed in an earlier pass.
+	next if $processedRef->{$fullPathPotentialVideo}++;
 	my ($shortFilename) = $potentialVideo =~ /(.*?)\.\w{3}$/;
 
 	my @subsFilenames = ();
@@ -161,8 +189,10 @@ sub processDirectory
 	}
 
 	processFile($fullPathPotentialVideo,$shortFilename,\@subsFilenames);
+	$didWork = 1;
     }
-    
+
+    return $didWork;
 }
 
 sub getSubtitles
