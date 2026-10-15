@@ -188,7 +188,7 @@ sub processDirectory
 
             foreach my $subsFile ( sort { lc $a cmp lc $b } @subsFiles )
             {
-                push @subsFilenames, "'$subsDir/$subsFile'";
+                push @subsFilenames, shq("$subsDir/$subsFile");
             }
         }
 
@@ -199,6 +199,15 @@ sub processDirectory
     return $didWork;
 }
 
+# Quote a string for safe use as a single shell argument, escaping any
+# embedded single quotes (e.g. "Winner's Story").
+sub shq
+{
+    my $s = shift;
+    $s =~ s/'/'\\''/g;
+    return "'$s'";
+}
+
 sub getSubtitles
 {
     my $sourceFullPathFilename = shift;
@@ -207,7 +216,7 @@ sub getSubtitles
 
     print "Getting subtitle indices for $sourceFullPathFilename\n" if DEBUG;
     print "Exeucting '$mediainfo $sourceFullPathFilename'\n"       if DEBUG;
-    open MI, "$mediainfo '$sourceFullPathFilename' | " or die "Couldn't open mediainfo execution: $!";
+    open MI, "$mediainfo " . shq($sourceFullPathFilename) . " | " or die "Couldn't open mediainfo execution: $!";
 
     # We have to do this whole thing because MKV supports graphical subtitles
     # and MP4 doesn't. If HandbrakeCLI is told to bring a graphical subtitle
@@ -320,7 +329,7 @@ sub processFile
                 $TARGETCODEC = $CODECS{$resOption} if ( $outputFilename =~ /$resOption/ );
             }
 
-            my $commandLine = "$handbrakeCLI --crop 0:0:0:0 -i '$sourceFullPathFilename' -o '$outputFilename' --all-audio --preset='$TARGETCODEC'  --subtitle=$subsCommas --subtitle-burned=none $subFileSwitch";
+            my $commandLine = "$handbrakeCLI --crop 0:0:0:0 -i " . shq($sourceFullPathFilename) . " -o " . shq($outputFilename) . " --all-audio --preset=" . shq($TARGETCODEC) . "  --subtitle=$subsCommas --subtitle-burned=none $subFileSwitch";
             print " --CMDLN: $commandLine\n" if DEBUG;
 
             if ( !$dryRun )
@@ -345,25 +354,25 @@ sub processFile
             {
                 # Do this via a temp-file because non-atomic moves into TV can cause
                 # failed imports.
-                my $tmpFilename = '/tmp/converter.$$';
-                system("/bin/cp '$outputFilename' '$tmpFilename'");
-                system("/bin/mv '$tmpFilename' '$TVFilename'");
+                my $tmpFilename = "/tmp/converter.$$";
+                system( "/bin/cp " . shq($outputFilename) . " " . shq($tmpFilename) );
+                system( "/bin/mv " . shq($tmpFilename) . " " . shq($TVFilename) );
             }
             if ( !$noCloudConverted )
             {
-                system("/bin/cp '$outputFilename' '$dropboxFilename'");
+                system( "/bin/cp " . shq($outputFilename) . " " . shq($dropboxFilename) );
             }
             if ( !$noCloudOriginal )
             {
-                system("/bin/cp '$sourceFullPathFilename' '$DROPBOX_DIR/.'");
+                system( "/bin/cp " . shq($sourceFullPathFilename) . " " . shq("$DROPBOX_DIR/.") );
             }
             if ($trashWorkproduct)
             {
-                system("/usr/bin/trash '$outputFilename'");
+                system( "/usr/bin/trash " . shq($outputFilename) );
             }
             if ($trashOriginal)
             {
-                system("/usr/bin/trash '$sourceFullPathFilename'");
+                system( "/usr/bin/trash " . shq($sourceFullPathFilename) );
             }
         }
         else
